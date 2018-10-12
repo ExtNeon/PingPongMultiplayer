@@ -1,0 +1,26 @@
+<resources>
+    <string name="app_name">Pong Multiplayer v0.00b</string>
+    <string name="AFK_caption">Режим автопилота активен</string>
+    <string name="start_messsage_caption">Выберите тип игры:</string>
+    <string name="start_game_caption">Начать игру</string>
+    <string name="current_round_time">Время текущего раунда:</string>
+    <string name="best_time">Лучшее время:</string>
+    <string name="days">дн.</string>
+    <string name="hours">час.</string>
+    <string name="minutes">мин.</string>
+    <string name="seconds">сек.</string>
+    <string name="singleplayer">Одиночная игра</string>
+    <string name="multiplayer_master">Создать игру</string>
+    <string name="multiplayer_slave">Присоединиться к игре</string>
+    <string name="singleplayer_settings">Настройки однопользовательской игры</string>
+    <string name="select">Выбрать</string>
+    <string name="difficulity">Сложность соперника:</string>
+    <string name="max_speed_of_ball">Максимальная скорость шара:</string>
+    <string name="allow_AFK_mode">Разрешить переход в авторежим</string>
+    <string name="score_limit">Целевое количество очков:</string>
+    <string name="match_results">Результаты игры:</string>
+    <string name="you_won">Вы победили!</string>
+    <string name="you_lose">Вы проиграли…</string>
+    <string name="revenge">Реванш!</string>
+    <string name="replay">Ещё раз!</string>
+</resources>

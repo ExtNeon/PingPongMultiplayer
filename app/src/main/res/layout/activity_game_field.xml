@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".GameFieldActivity">
+
+    <ImageView
+        android:id="@+id/my_platform"
+        android:layout_width="99dp"
+        android:layout_height="15dp"
+        app:srcCompat="@color/normalPlatformColor"
+        tools:ignore="MissingConstraints"
+        tools:layout_editor_absoluteX="143dp"
+        tools:layout_editor_absoluteY="46dp" />
+
+    <ImageView
+        android:id="@+id/enemy_platform"
+        android:layout_width="99dp"
+        android:layout_height="15dp"
+        app:srcCompat="@color/normalPlatformColor"
+        tools:ignore="ContentDescription,MissingConstraints"
+        tools:layout_editor_absoluteX="143dp"
+        tools:layout_editor_absoluteY="461dp" />
+
+    <ImageView
+        android:id="@+id/ball"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:srcCompat="@mipmap/ic_launcher_round"
+        tools:layout_editor_absoluteX="156dp"
+        tools:layout_editor_absoluteY="212dp" />
+
+    <TextView
+        android:id="@+id/enemy_score"
+        android:layout_width="73dp"
+        android:layout_height="wrap_content"
+        android:autoText="false"
+        android:gravity="center"
+        android:text="0"
+        android:textSize="30sp"
+        tools:layout_editor_absoluteX="310dp"
+        tools:layout_editor_absoluteY="212dp" />
+
+    <TextView
+        android:id="@+id/my_score"
+        android:layout_width="73dp"
+        android:layout_height="wrap_content"
+        android:autoText="false"
+        android:gravity="center"
+        android:text="0"
+        android:textSize="30sp"
+        tools:layout_editor_absoluteX="310dp"
+        tools:layout_editor_absoluteY="265dp" />
+
+    <TextView
+        android:id="@+id/afk_mode_caption"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/AFK_caption"
+        android:textSize="19sp"
+        tools:layout_editor_absoluteX="67dp"
+        tools:layout_editor_absoluteY="489dp" />
+
+    <TextView
+        android:id="@+id/max_time_caption"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/current_round_time"
+        tools:ignore="MissingConstraints"
+        tools:layout_editor_absoluteX="228dp"
+        tools:layout_editor_absoluteY="5dp" />
+
+</android.support.constraint.ConstraintLayout>
