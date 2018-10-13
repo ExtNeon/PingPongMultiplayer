@@ -15,6 +15,9 @@ import java.util.Objects;
 
 public class GameFieldActivity extends AppCompatActivity implements View.OnTouchListener, Runnable {
     public static final int AFK_TIME_THRESHOLD = 8000;
+    public static final int DELAY_BEFORE_START_ROUND = 400;
+    public static final int DELAY_AFTER_LOSE_ROUND = 500;
+    public static final double MIN_BALL_SPEED = 1.4;
 
     TextView myScore;
     TextView enemyScore;
@@ -51,6 +54,17 @@ public class GameFieldActivity extends AppCompatActivity implements View.OnTouch
                         getIntent().getIntExtra("score_limit", 20));
                 break;
         }
+
+        showResults();
+        finish();
+    }
+
+    private void showResults() {
+        Intent resultIntent = new Intent(GameFieldActivity.this, GameResultsActivity.class);
+        resultIntent.putExtra("enemy_score", enemyScoreCounter);
+        resultIntent.putExtra("my_score", myScoreCounter);
+        resultIntent.putExtra("best_time_formatted", formatTime(maxGameTime));
+        startActivity(resultIntent);
     }
 
     private void prepareField(DoublePoint centerPoint) {
@@ -69,12 +83,13 @@ public class GameFieldActivity extends AppCompatActivity implements View.OnTouch
         setYOnView(AFKModeCaption, gameView.getHeight() - AFKModeCaption.getHeight());
         setYOnView(maxTimeCaption, 0);
         mode = (PlayMode) getIntent().getSerializableExtra("mode");
+        setViewVisibility(gameView, View.VISIBLE);
     }
 
     private void doSingleplayerGame(DoublePoint centerPoint, int maxBallSpeed, int enemyAIspeed, boolean allowAFK, int scoreLimit) {
         DoublePoint ballPosition = new DoublePoint(centerPoint.x - ball.getWidth() / 2, centerPoint.y);
-        DoublePoint ballSpeed = new DoublePoint(generateNewBallSpeed(maxBallSpeed, false));
-
+        DoublePoint ballSpeed = new DoublePoint(0, 0);
+        startNewRound(centerPoint, maxBallSpeed, ballPosition, ballSpeed, false);
         long gameStartedTime = System.currentTimeMillis();
 
         while (myScoreCounter < scoreLimit && enemyScoreCounter < scoreLimit) {
@@ -94,10 +109,6 @@ public class GameFieldActivity extends AppCompatActivity implements View.OnTouch
             delayMs(10);
             refreshBallPosition(ballPosition);
         }
-
-        Intent resultIntent = new Intent(GameFieldActivity.this, GameResultsActivity.class);
-        startActivity(resultIntent);
-        finish();
     }
 
     private boolean checkBallLoseFactor(DoublePoint centerPoint, int maxBallSpeed, DoublePoint ballPosition, DoublePoint ballSpeed) {
@@ -115,23 +126,27 @@ public class GameFieldActivity extends AppCompatActivity implements View.OnTouch
 
             //   myScore.setX(gameView.getWidth() - myScore.getWidth() - 2);
             //enemyScore.setX(gameView.getWidth() - enemyScore.getWidth() - 2);
-            delayMs(500);
-            setImageResourceOnView(enemyPlatform, R.color.normalPlatformColor);
-            setImageResourceOnView(myPlatform, R.color.normalPlatformColor);
-            ballPosition.set(centerPoint.x - ball.getWidth() / 2, centerPoint.y);
-            ballSpeed.set(generateNewBallSpeed(maxBallSpeed, enemyLoseFlag));
-            refreshBallPosition(ballPosition);
+            delayMs(DELAY_AFTER_LOSE_ROUND);
+            startNewRound(centerPoint, maxBallSpeed, ballPosition, ballSpeed, enemyLoseFlag);
 
-            delayMs(200);
             return true;
         } else {
             return false;
         }
     }
 
+    private void startNewRound(DoublePoint centerPoint, int maxBallSpeed, DoublePoint ballPosition, DoublePoint ballSpeed, boolean enemyLoseFlag) {
+        setImageResourceOnView(enemyPlatform, R.color.normalPlatformColor);
+        setImageResourceOnView(myPlatform, R.color.normalPlatformColor);
+        ballPosition.set(centerPoint.x - ball.getWidth() / 2, centerPoint.y);
+        ballSpeed.set(generateNewBallSpeed(maxBallSpeed, enemyLoseFlag));
+        refreshBallPosition(ballPosition);
+        delayMs(DELAY_BEFORE_START_ROUND);
+    }
+
     private DoublePoint generateNewBallSpeed(int maxBallSpeed, boolean enemyLoseFlag) {
-        double newYSpeed = Math.random() * maxBallSpeed / 1.5 + 1.4;
-        double newXSpeed = Math.random() * maxBallSpeed / 1.5 + 1.4;
+        double newYSpeed = Math.random() * maxBallSpeed / 1.5 + MIN_BALL_SPEED;
+        double newXSpeed = Math.random() * maxBallSpeed / 1.5 + MIN_BALL_SPEED;
         if (Math.random() > 0.5) {
             newXSpeed *= -1;
         }
@@ -368,6 +383,7 @@ public class GameFieldActivity extends AppCompatActivity implements View.OnTouch
         maxTimeCaption = findViewById(R.id.max_time_caption);
         // назначаем слушателя касания для Layout-а
         gameView.setOnTouchListener(this);
+        gameView.setVisibility(View.INVISIBLE);
         new Thread(this).start();
     }
 
