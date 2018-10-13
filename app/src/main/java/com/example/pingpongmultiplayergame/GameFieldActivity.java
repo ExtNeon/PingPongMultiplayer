@@ -30,7 +30,7 @@ public class GameFieldActivity extends AppCompatActivity implements View.OnTouch
     int myScoreCounter = 0;
     int enemyScoreCounter = 0;
     boolean inAFKMode = false;
-    PlayMode mode = PlayMode.SINGLEPLAYER;
+    PlayMode mode;
 
     long lastTouchTime = System.currentTimeMillis();
     long maxGameTime = 0;
@@ -45,6 +45,7 @@ public class GameFieldActivity extends AppCompatActivity implements View.OnTouch
 
         prepareField(centerPoint);
 
+        mode = (PlayMode) getIntent().getSerializableExtra("mode");
         switch (mode) {
             case SINGLEPLAYER:
                 doSingleplayerGame(centerPoint,
@@ -82,7 +83,6 @@ public class GameFieldActivity extends AppCompatActivity implements View.OnTouch
         setXOnView(maxTimeCaption, gameView.getWidth() - maxTimeCaption.getWidth() - 3);
         setYOnView(AFKModeCaption, gameView.getHeight() - AFKModeCaption.getHeight());
         setYOnView(maxTimeCaption, 0);
-        mode = (PlayMode) getIntent().getSerializableExtra("mode");
         setViewVisibility(gameView, View.VISIBLE);
     }
 
@@ -123,9 +123,6 @@ public class GameFieldActivity extends AppCompatActivity implements View.OnTouch
             }
             setTextOnView(myScore, "" + myScoreCounter);
             setTextOnView(enemyScore, "" + enemyScoreCounter);
-
-            //   myScore.setX(gameView.getWidth() - myScore.getWidth() - 2);
-            //enemyScore.setX(gameView.getWidth() - enemyScore.getWidth() - 2);
             delayMs(DELAY_AFTER_LOSE_ROUND);
             startNewRound(centerPoint, maxBallSpeed, ballPosition, ballSpeed, enemyLoseFlag);
 
@@ -147,7 +144,7 @@ public class GameFieldActivity extends AppCompatActivity implements View.OnTouch
     private DoublePoint generateNewBallSpeed(int maxBallSpeed, boolean enemyLoseFlag) {
         double newYSpeed = Math.random() * maxBallSpeed / 1.5 + MIN_BALL_SPEED;
         double newXSpeed = Math.random() * maxBallSpeed / 1.5 + MIN_BALL_SPEED;
-        if (Math.random() > 0.5) {
+        if (Math.random() > 0.5) { //С вероятностью в 50% мы выбираем, в какую сторону запускать шарик
             newXSpeed *= -1;
         }
         if (enemyLoseFlag) {
