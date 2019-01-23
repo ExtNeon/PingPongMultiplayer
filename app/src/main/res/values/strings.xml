@@ -23,4 +23,5 @@
     <string name="you_lose">Вы проиграли…</string>
     <string name="revenge">Реванш!</string>
     <string name="replay">Ещё раз!</string>
+    <string name="game_paused">Пауза</string>
 </resources>

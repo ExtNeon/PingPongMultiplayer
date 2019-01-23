@@ -1,10 +1,14 @@
 package com.example.pingpongmultiplayergame;
 
 import android.content.Intent;
+import android.media.AudioAttributes;
+import android.media.AudioManager;
+import android.media.SoundPool;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -19,13 +23,25 @@ public class GameFieldActivity extends AppCompatActivity implements View.OnTouch
     public static final int DELAY_AFTER_LOSE_ROUND = 500;
     public static final double MIN_BALL_SPEED = 1.4;
 
+
+    TextView pausedNotifyCaption;
+    Button pauseGameButton;
+    boolean gamePausedFlag = false; //Флаг лишь говорит о том, что хочет пользователь
+    boolean gameIsPaused = false; //А это уже состояние, в котором игра сейчас находится
+    private SoundPool soundPool;
+    private int ballCollidedWithBorderSound;
+    private int ballCollidedWithMyPlatformSound;
+    private int ballCollidedWithEnemyPlatformSound;
+
     TextView myScore;
     TextView enemyScore;
     TextView AFKModeCaption;
     TextView maxTimeCaption;
+    private int meLoseSound;
     ImageView myPlatform;
     ImageView enemyPlatform;
     ImageView ball;
+    private int enemyLoseSound;
     View gameView;
     int myScoreCounter = 0;
     int enemyScoreCounter = 0;
@@ -34,8 +50,12 @@ public class GameFieldActivity extends AppCompatActivity implements View.OnTouch
 
     long lastTouchTime = System.currentTimeMillis();
     long maxGameTime = 0;
+    private int pauseModeOnSound;
+    private int pauseModeOffSound;
 
-
+    /**
+     * Основной поток программы
+     */
     @Override
     public void run() {
         while (gameView.getHeight() <= 0) {
@@ -60,6 +80,9 @@ public class GameFieldActivity extends AppCompatActivity implements View.OnTouch
         finish();
     }
 
+    /**
+     * Вызывает активити GameResultsActivity, передавая ему данные о
+     */
     private void showResults() {
         Intent resultIntent = new Intent(GameFieldActivity.this, GameResultsActivity.class);
         resultIntent.putExtra("enemy_score", enemyScoreCounter);
@@ -83,7 +106,12 @@ public class GameFieldActivity extends AppCompatActivity implements View.OnTouch
         setXOnView(maxTimeCaption, gameView.getWidth() - maxTimeCaption.getWidth() - 3);
         setYOnView(AFKModeCaption, gameView.getHeight() - AFKModeCaption.getHeight());
         setYOnView(maxTimeCaption, 0);
+
+        setXOnView(pausedNotifyCaption, (float) (centerPoint.x - pausedNotifyCaption.getWidth() / 2));
+        setYOnView(pausedNotifyCaption, (float) (centerPoint.y - pausedNotifyCaption.getHeight() * 2));
+
         setViewVisibility(gameView, View.VISIBLE);
+        setViewVisibility(pausedNotifyCaption, View.INVISIBLE);
     }
 
     private void doSingleplayerGame(DoublePoint centerPoint, int maxBallSpeed, int enemyAIspeed, boolean allowAFK, int scoreLimit) {
@@ -93,21 +121,46 @@ public class GameFieldActivity extends AppCompatActivity implements View.OnTouch
         long gameStartedTime = System.currentTimeMillis();
 
         while (myScoreCounter < scoreLimit && enemyScoreCounter < scoreLimit) {
-            accelerateBall(ballPosition, ballSpeed);
-            checkBallCollisionWithTheFieldEdges(ballPosition, ballSpeed);
-            processAFKMode(allowAFK, ballPosition, enemyAIspeed);
-            applyAIEnemyAction(ballPosition, enemyAIspeed);
-            if (System.currentTimeMillis() - gameStartedTime > maxGameTime) {
-                maxGameTime = System.currentTimeMillis() - gameStartedTime;
+            if (gamePausedFlag) {
+                if (!gameIsPaused) {
+                    setViewVisibility(pausedNotifyCaption, View.VISIBLE);
+                    //pauseGameButton.setBackground();
+                    pauseGameButton.setBackgroundResource(R.drawable.start);
+                    playSoundOneShot(pauseModeOnSound);
+                    gameIsPaused = true;
+                }
+            } else {
+                if (gameIsPaused) {
+                    setViewVisibility(pausedNotifyCaption, View.INVISIBLE);
+                    pauseGameButton.setBackgroundResource(R.drawable.pause);
+                    playSoundOneShot(pauseModeOffSound);
+                    gameIsPaused = false;
+                }
             }
-            updateTimeCaption(gameStartedTime);
-            if (checkBallLoseFactor(centerPoint, maxBallSpeed, ballPosition, ballSpeed)) {
-                gameStartedTime = System.currentTimeMillis();
+            if (!gameIsPaused) {
+                accelerateBall(ballPosition, ballSpeed);
+                checkBallCollisionWithTheFieldEdges(ballPosition, ballSpeed);
+                processAFKMode(allowAFK, ballPosition, enemyAIspeed);
+
+                applyAIEnemyAction(ballPosition, enemyAIspeed);
+                if (System.currentTimeMillis() - gameStartedTime > maxGameTime) {
+                    maxGameTime = System.currentTimeMillis() - gameStartedTime;
+                }
+                updateTimeCaption(gameStartedTime);
+                if (checkBallLoseFactor(centerPoint, maxBallSpeed, ballPosition, ballSpeed)) {
+                    gameStartedTime = System.currentTimeMillis();
+                }
+                if (checkCollisionWithMyPlatform(ballPosition, ballSpeed, maxBallSpeed)) {
+                    playSoundOneShot(ballCollidedWithMyPlatformSound);
+                } else if (checkCollisionWithEnenemyPlatform(ballPosition, ballSpeed, maxBallSpeed)) {
+                    playSoundOneShot(ballCollidedWithEnemyPlatformSound);
+                }
+
+                delayMs(10);
+                refreshBallPosition(ballPosition);
+            } else {
+                delayMs(100);
             }
-            checkCollisionWithMyPlatform(ballPosition, ballSpeed, maxBallSpeed);
-            checkCollisionWithEnenemyPlatform(ballPosition, ballSpeed, maxBallSpeed);
-            delayMs(10);
-            refreshBallPosition(ballPosition);
         }
     }
 
@@ -117,9 +170,11 @@ public class GameFieldActivity extends AppCompatActivity implements View.OnTouch
             if (enemyLoseFlag) {
                 myScoreCounter++;
                 setImageResourceOnView(enemyPlatform, R.color.losedPlatformColor);
+                playSoundOneShot(enemyLoseSound);
             } else {
                 enemyScoreCounter++;
                 setImageResourceOnView(myPlatform, R.color.losedPlatformColor);
+                playSoundOneShot(meLoseSound);
             }
             setTextOnView(myScore, "" + myScoreCounter);
             setTextOnView(enemyScore, "" + enemyScoreCounter);
@@ -170,18 +225,32 @@ public class GameFieldActivity extends AppCompatActivity implements View.OnTouch
     }
 
     private void checkBallCollisionWithTheFieldEdges(DoublePoint ballPosition, DoublePoint ballSpeed) {
-        if (ballPosition.x + ball.getWidth() > gameView.getWidth()) {
-            ballSpeed.x *= -1;
-            ballPosition.x = gameView.getWidth() - ball.getWidth();
-        } else if (ballPosition.x < 0) {
-            ballPosition.x = 0;
-            ballSpeed.x *= -1;
+        boolean collidedWithLeftBorder = ballPosition.x < 0;
+        boolean collidedWithRightBorder = ballPosition.x + ball.getWidth() > gameView.getWidth();
+        if (collidedWithLeftBorder || collidedWithRightBorder) {
+            if (collidedWithRightBorder) {
+                ballSpeed.x *= -1;
+                ballPosition.x = gameView.getWidth() - ball.getWidth();
+            } else {
+                ballPosition.x = 0;
+                ballSpeed.x *= -1;
+            }
+            playSoundOneShot(ballCollidedWithBorderSound);
         }
     }
 
     private void accelerateBall(DoublePoint ballPosition, DoublePoint ballSpeed) {
         ballPosition.x += ballSpeed.x;
         ballPosition.y += ballSpeed.y;
+    }
+
+    private void playSoundOneShot(int soundId) {
+        AudioManager audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
+        assert audioManager != null;
+        float actualVolume = (float) audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+        float maxVolume = (float) audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+        float volume = actualVolume / maxVolume;
+        soundPool.play(soundId, volume, volume, 1, 0, 1f);
     }
 
     /**
@@ -305,7 +374,8 @@ public class GameFieldActivity extends AppCompatActivity implements View.OnTouch
 
     }
 
-    private void checkCollisionWithMyPlatform(DoublePoint ballPosition, DoublePoint ballSpeed, double maxBallSpeed) {
+    private boolean checkCollisionWithMyPlatform(DoublePoint ballPosition, DoublePoint ballSpeed, double maxBallSpeed) {
+        boolean isCollided = false;
         if ((ballPosition.y + ball.getHeight() >= myPlatform.getY() && ballPosition.y <= myPlatform.getHeight() + myPlatform.getY())) {
             if ((ballPosition.x < myPlatform.getX() + myPlatform.getWidth() && ballPosition.x + ball.getWidth() > myPlatform.getX())) {
                 double accuracy = Math.abs(ballPosition.x - (myPlatform.getX() + (myPlatform.getWidth() / 2.))) / (myPlatform.getWidth() / 2.);
@@ -319,16 +389,19 @@ public class GameFieldActivity extends AppCompatActivity implements View.OnTouch
                         ballSpeed.x += ballSpeed.x / 8;
                     }
                 }
-
                 ballPosition.y = myPlatform.getY() - (ball.getHeight());
+                isCollided = true;
             }
             if (Math.abs(ballPosition.x - (myPlatform.getX() + myPlatform.getWidth())) <= Math.abs(ballSpeed.x) || Math.abs(myPlatform.getX() - (ballPosition.x + ball.getWidth())) <= Math.abs(ballSpeed.x)) {
                 ballSpeed.x *= -1;
+                isCollided = true;
             }
         }
+        return isCollided;
     }
 
-    private void checkCollisionWithEnenemyPlatform(DoublePoint ballPosition, DoublePoint ballSpeed, double maxBallSpeed) {
+    private boolean checkCollisionWithEnenemyPlatform(DoublePoint ballPosition, DoublePoint ballSpeed, double maxBallSpeed) {
+        boolean isCollided = false;
         if ((ballPosition.y <= enemyPlatform.getY() + enemyPlatform.getHeight() && ballPosition.y + ball.getHeight() >= enemyPlatform.getY())) {
             if ((ballPosition.x < enemyPlatform.getX() + enemyPlatform.getWidth() && ballPosition.x + ball.getWidth() > enemyPlatform.getX())) {
                 double accuracy = Math.abs(ballPosition.x - (enemyPlatform.getX() + (enemyPlatform.getWidth() / 2.))) / (enemyPlatform.getWidth() / 2.);
@@ -343,11 +416,14 @@ public class GameFieldActivity extends AppCompatActivity implements View.OnTouch
                     }
                 }
                 ballPosition.y = enemyPlatform.getY() + enemyPlatform.getHeight();
+                isCollided = true;
             }
             if (Math.abs(ballPosition.x - (enemyPlatform.getX() + enemyPlatform.getWidth())) <= Math.abs(ballSpeed.x) || Math.abs(enemyPlatform.getX() - (ballPosition.x + ball.getWidth())) <= Math.abs(ballSpeed.x)) {
                 ballSpeed.x *= -1;
+                isCollided = true;
             }
         }
+        return isCollided;
     }
 
     private void refreshBallPosition(DoublePoint newBallPosition) {
@@ -378,9 +454,28 @@ public class GameFieldActivity extends AppCompatActivity implements View.OnTouch
         ball = findViewById(R.id.ball);
         AFKModeCaption = findViewById(R.id.afk_mode_caption);
         maxTimeCaption = findViewById(R.id.max_time_caption);
+        pausedNotifyCaption = findViewById(R.id.paused_notify_caption);
+        pauseGameButton = findViewById(R.id.pause_game_button);
+        pauseGameButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                gamePausedFlag = !gamePausedFlag;
+            }
+        });
         // назначаем слушателя касания для Layout-а
         gameView.setOnTouchListener(this);
         gameView.setVisibility(View.INVISIBLE);
+
+        // Связываем кнопку громкости с нашим приложением
+        this.setVolumeControlStream(AudioManager.STREAM_MUSIC);
+        soundPool = getSoundPoolLink();
+        ballCollidedWithBorderSound = soundPool.load(this, R.raw.border_collision, 1);
+        ballCollidedWithEnemyPlatformSound = soundPool.load(this, R.raw.platform_collision, 1);
+        ballCollidedWithMyPlatformSound = ballCollidedWithEnemyPlatformSound;
+        enemyLoseSound = soundPool.load(this, R.raw.lose, 1);
+        meLoseSound = enemyLoseSound;
+        pauseModeOnSound = soundPool.load(this, R.raw.pause_on, 1);
+        pauseModeOffSound = soundPool.load(this, R.raw.pause_off, 1);
         new Thread(this).start();
     }
 
@@ -404,4 +499,11 @@ public class GameFieldActivity extends AppCompatActivity implements View.OnTouch
 
         return (days > 0 ? days + " " + getString(R.string.days) + " " : "") + (hours > 0 ? hours + " " + getString(R.string.hours) + " " : "") + (minutes > 0 ? minutes + " " + getString(R.string.minutes) + " " : "") + seconds /*+ (false ? '.' + millis : "") */ + " " + getString(R.string.seconds);
     }
+
+    private SoundPool getSoundPoolLink() {
+        return new SoundPool.Builder().setAudioAttributes(
+                new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_GAME)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()).build();
+    }
 }
+
